@@ -32,21 +32,24 @@
       "url": "https://github.com/amilajack"
     }
   ],
-  "main": "./src/main/main.ts",
+  "main": "dist/main/main.js",
   "scripts": {
+    "prebuild": "tsc",
     "build": "concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
-    "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.prod.ts",
+    "build:main": "tsc && cross-env NODE_ENV=production webpack --config ./.erb/configs/webpack.config.main.prod.ts",
     "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
     "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps && npm run build:dll",
-    "lint": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx",
     "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && npm run build:dll",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run start:renderer",
     "start:main": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only .",
     "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
     "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
-    "test": "jest"
+    "test": "jest",
+    "lint": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx",
+    "pack": "electron-builder --dir",
+    "dist": "npm run prebuild && electron-builder"
   },
   "browserslist": [],
   "prettier": {
@@ -96,12 +99,19 @@
     }
   },
   "dependencies": {
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.8",
+    "@mui/material": "^5.15.7",
+    "@mui/styled-engine-sc": "^6.0.0-alpha.15",
+    "@mui/x-tree-view": "^6.17.0",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
     "electron-updater": "^6.1.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.16.0"
+    "react-router-dom": "^6.16.0",
+    "styled-components": "^6.1.8"
   },
   "devDependencies": {
     "@electron/notarize": "^2.1.0",
@@ -129,7 +139,7 @@
     "css-minimizer-webpack-plugin": "^5.0.1",
     "detect-port": "^1.5.1",
     "electron": "^26.2.1",
-    "electron-builder": "^24.6.4",
+    "electron-builder": "^24.9.1",
     "electron-devtools-installer": "^3.2.0",
     "electronmon": "^2.0.2",
     "eslint": "^8.49.0",
@@ -171,7 +181,7 @@
     "webpack-merge": "^5.9.0"
   },
   "build": {
-    "productName": "ElectronReact",
+    "productName": "Image Generator",
     "appId": "org.erb.ElectronReact",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",
@@ -189,6 +199,7 @@
           "x64"
         ]
       },
+      "icon": "build/icons/app.icns",
       "type": "distribution",
       "hardenedRuntime": true,
       "entitlements": "assets/entitlements.mac.plist",
@@ -212,12 +223,14 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "build/icons/app.ico"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
+      "icon": "build/icons/app.png",
       "category": "Development"
     },
     "directories": {
