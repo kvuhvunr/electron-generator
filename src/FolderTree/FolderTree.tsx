@@ -224,46 +224,107 @@ function FileSystemNavigator() {
   //   }
   // };
 
+  // const handleImageUpload = (event: { target: { files: any[] } }) => {
+  //   const file = event.target.files[0];
+  //   if (!file) {
+  //     return;
+  //   }
+
+  //   // 파일 확장자 확인
+  //   const fileExtension = file.name.split('.').pop().toLowerCase();
+
+  //   if (fileExtension === 'png') {
+  //     const reader = new FileReader();
+  //     reader.onload = (loadEvent: any) => {
+  //       const newImageUrl = loadEvent.target.result;
+  //       if (selectedNodeId) {
+  //         setNodes((prevNodes: any) => {
+  //           const updatedNodes = { ...prevNodes };
+  //           const selectedNode = updatedNodes[selectedNodeId];
+  //           if (selectedNode) {
+  //             selectedNode.imageUrls = [...selectedNode.imageUrls, newImageUrl];
+  //           }
+  //           return updatedNodes;
+  //         });
+  //       }
+  //     };
+  //     reader.readAsDataURL(file);
+  //   } else {
+  //     // PNG가 아닌 경우, 직접 placeholder URL을 추가
+  //     if (selectedNodeId) {
+  //       setNodes((prevNodes: any) => {
+  //         const updatedNodes = { ...prevNodes };
+  //         const selectedNode = updatedNodes[selectedNodeId];
+  //         if (selectedNode) {
+  //           selectedNode.imageUrls = [
+  //             ...selectedNode.imageUrls,
+  //             'https://via.placeholder.com/150',
+  //           ];
+  //         }
+  //         return updatedNodes;
+  //       });
+  //     }
+  //   }
+  // };
+
   const handleImageUpload = (event: { target: { files: any[] } }) => {
     const file = event.target.files[0];
     if (!file) {
       return;
     }
 
-    // 파일 확장자 확인
-    const fileExtension = file.name.split('.').pop().toLowerCase();
+    // 지원하는 이미지 파일 확장자 목록
+    const supportedExtensions = [
+      'png',
+      'jpg',
+      'gif',
+      'bmp',
+      'tiff',
+      'psd',
+      'psb',
+      'webp',
+      'ico',
+      'anigif',
+    ];
 
-    if (fileExtension === 'png') {
-      const reader = new FileReader();
-      reader.onload = (loadEvent: any) => {
-        const newImageUrl = loadEvent.target.result;
-        if (selectedNodeId) {
-          setNodes((prevNodes: any) => {
-            const updatedNodes = { ...prevNodes };
-            const selectedNode = updatedNodes[selectedNodeId];
-            if (selectedNode) {
-              selectedNode.imageUrls = [...selectedNode.imageUrls, newImageUrl];
-            }
-            return updatedNodes;
-          });
-        }
-      };
-      reader.readAsDataURL(file);
-    } else {
-      // PNG가 아닌 경우, 직접 placeholder URL을 추가
+    // 파일 확장자 확인
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+    // 확장자가 지원 목록에 있는지 확인
+    const isSupportedImage = supportedExtensions.includes(fileExtension || '');
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent: any) => {
+      const newImageUrl = isSupportedImage
+        ? loadEvent.target.result
+        : 'https://via.placeholder.com/128';
       if (selectedNodeId) {
         setNodes((prevNodes: any) => {
           const updatedNodes = { ...prevNodes };
-          const selectedNode = updatedNodes[selectedNodeId];
-          if (selectedNode) {
-            selectedNode.imageUrls = [
-              ...selectedNode.imageUrls,
-              'https://via.placeholder.com/150',
+          const fnSelectedNode = updatedNodes[selectedNodeId];
+          if (fnSelectedNode) {
+            fnSelectedNode.imageUrls = [
+              ...fnSelectedNode.imageUrls,
+              newImageUrl,
             ];
           }
           return updatedNodes;
         });
       }
+    };
+
+    if (isSupportedImage) {
+      reader.readAsDataURL(file);
+    } else {
+      // 지원하지 않는 확장자의 경우 직접 placeholder URL 추가
+      setNodes((prevNodes: any) => {
+        const updatedNodes = { ...prevNodes };
+        const fnSelectedNode = updatedNodes[selectedNodeId];
+        if (fnSelectedNode) {
+          fnSelectedNode.imageUrls.push('https://via.placeholder.com/128');
+        }
+        return updatedNodes;
+      });
     }
   };
 
@@ -288,25 +349,44 @@ function FileSystemNavigator() {
               autoFocus
             />
           ) : (
-            <div onClick={() => setSelectedNode(nodes[nodeId])}>
+            <div role="button" onClick={() => setSelectedNode(nodes[nodeId])}>
               {node.name}
               <IconButton
                 size="small"
+                // style={{
+                //   height: '12px',
+                //   width: '12px',
+                // }}
                 onClick={(event) => handleAddNode(node.id, event)}
               >
-                <AddBoxIcon />
+                <AddBoxIcon
+                  style={{
+                    height: '17px',
+                    width: '17px',
+                  }}
+                />
               </IconButton>
               <IconButton
                 size="small"
                 onClick={(event) => handleEditNodeStart(node.id, event)}
               >
-                <EditIcon />
+                <EditIcon
+                  style={{
+                    height: '17px',
+                    width: '17px',
+                  }}
+                />
               </IconButton>
               <IconButton
                 size="small"
                 onClick={(event) => handleRemoveNode(node.id, event)}
               >
-                <DeleteIcon />
+                <DeleteIcon
+                  style={{
+                    height: '17px',
+                    width: '17px',
+                  }}
+                />
               </IconButton>
             </div>
           )
@@ -757,20 +837,75 @@ function FileSystemNavigator() {
       });
 
       // 이미지 파일 처리
+      // if (file.type.startsWith('image/') && imageParentId) {
+      //   const reader = new FileReader();
+      //   const fileReaderPromise = new Promise<void>((resolve) => {
+      //     reader.onload = (loadEvent) => {
+      //       const result = loadEvent.target?.result;
+      //       if (typeof result === 'string' && newNodes[imageParentId]) {
+      //         newNodes[imageParentId].imageUrls.push(result);
+      //       }
+      //       resolve();
+      //     };
+      //     reader.readAsDataURL(file);
+      //   });
+
+      //   fileReaders.push(fileReaderPromise);
+      // }
+
       if (file.type.startsWith('image/') && imageParentId) {
+        // 지원하는 이미지 파일 확장자 목록
+        const supportedExtensions = [
+          'png',
+          'jpg',
+          'gif',
+          'bmp',
+          'tiff',
+          'psd',
+          'psb',
+          'webp',
+          'ico',
+          'anigif',
+        ];
+
+        // 파일 확장자 확인
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+        // 확장자가 지원 목록에 있는지 확인
+        const isSupportedImage = supportedExtensions.includes(
+          fileExtension || '',
+        );
+
         const reader = new FileReader();
         const fileReaderPromise = new Promise<void>((resolve) => {
           reader.onload = (loadEvent) => {
-            const result = loadEvent.target?.result;
-            if (typeof result === 'string' && newNodes[imageParentId]) {
-              newNodes[imageParentId].imageUrls.push(result);
+            // 지원하는 확장자인 경우 Base64 데이터를 사용, 그렇지 않은 경우 placeholder URL
+            const imageUrl = isSupportedImage
+              ? loadEvent.target?.result
+              : 'https://via.placeholder.com/150';
+            if (typeof imageUrl === 'string' && newNodes[imageParentId]) {
+              newNodes[imageParentId].imageUrls.push(imageUrl);
             }
             resolve();
           };
-          reader.readAsDataURL(file);
+
+          // 지원하는 이미지 확장자인 경우에만 파일을 읽음
+          if (isSupportedImage) {
+            reader.readAsDataURL(file);
+          } else {
+            // 지원하지 않는 확장자의 경우 즉시 placeholder 이미지 URL을 추가
+            resolve();
+          }
         });
 
         fileReaders.push(fileReaderPromise);
+
+        // 지원하지 않는 확장자일 경우, FileReader를 사용하지 않고도 Promise를 resolve
+        if (!isSupportedImage) {
+          reader.onload({
+            target: { result: 'https://via.placeholder.com/150' },
+          });
+        }
       }
     });
 
