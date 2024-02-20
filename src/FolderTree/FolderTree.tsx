@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useRef, useState } from 'react';
+import React, { ChangeEvent, useCallback, useRef, useState } from 'react';
 import { TreeItem, TreeView } from '@mui/x-tree-view';
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -112,50 +112,6 @@ function FileSystemNavigator() {
     setEditingNodeId(null);
   };
 
-  // 드래그 시작
-  const handleDragStart = (
-    event: React.DragEvent<HTMLLIElement>,
-    nodeId: any,
-  ) => {
-    event.dataTransfer.setData('node/id', nodeId);
-  };
-
-  // 드래그 완료
-  const handleDragOver = (event: { preventDefault: () => void }) => {
-    event.preventDefault();
-  };
-
-  // 드롭
-  const handleDrop = (
-    event: React.DragEvent<HTMLLIElement>,
-    targetNodeId: string | number,
-  ) => {
-    event.preventDefault();
-    const nodeId = event.dataTransfer.getData('node/id');
-    if (
-      !nodeId ||
-      nodeId === targetNodeId ||
-      nodes[nodeId].parentId === targetNodeId
-    ) {
-      return;
-    }
-
-    // Move node logic here
-    const newNodes = { ...nodes };
-    // Remove from old parent
-    if (newNodes[nodeId].parentId) {
-      const siblings = newNodes[newNodes[nodeId].parentId].children.filter(
-        (id: any) => id !== nodeId,
-      );
-      newNodes[newNodes[nodeId].parentId].children = siblings;
-    }
-    // Add to new parent
-    newNodes[targetNodeId].children.push(nodeId);
-    newNodes[nodeId].parentId = targetNodeId;
-
-    setNodes(newNodes);
-  };
-
   //
   const fileInputRef = useRef(null);
 
@@ -267,7 +223,11 @@ function FileSystemNavigator() {
   //   }
   // };
 
-  const handleImageUpload = (event: { target: { files: any[] } }) => {
+  // 이미지 업로드 버튼
+  const handleImageUpload = (
+    // files?: any,
+    event?: { target: { files: any[] } },
+  ) => {
     const file = event.target.files[0];
     if (!file) {
       return;
@@ -328,78 +288,149 @@ function FileSystemNavigator() {
     }
   };
 
-  // 폴더 선택
+  // 이미지 업로드 드래그앤드롭
+  const handleDropImageUpload =
+    // useCallback
+
+    (files: FileList, nodeId: any) => {
+      console.log(files[0]);
+      const file = files[0];
+      if (!file) {
+        return;
+      }
+
+      // 지원하는 이미지 파일 확장자 목록
+      const supportedExtensions = [
+        'png',
+        'jpg',
+        'gif',
+        'bmp',
+        'tiff',
+        'psd',
+        'psb',
+        'webp',
+        'ico',
+        'anigif',
+      ];
+
+      // 파일 확장자 확인
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+      // 확장자가 지원 목록에 있는지 확인
+      const isSupportedImage = supportedExtensions.includes(
+        fileExtension || '',
+      );
+
+      const reader = new FileReader();
+      reader.onload = (loadEvent: any) => {
+        const newImageUrl = isSupportedImage
+          ? loadEvent.target.result
+          : 'https://via.placeholder.com/128';
+        if (nodeId) {
+          setNodes((prevNodes: any) => {
+            const updatedNodes = { ...prevNodes };
+            const fnSelectedNode = updatedNodes[nodeId];
+            if (fnSelectedNode) {
+              fnSelectedNode.imageUrls = [
+                ...fnSelectedNode.imageUrls,
+                newImageUrl,
+              ];
+            }
+            return updatedNodes;
+          });
+        }
+      };
+
+      if (isSupportedImage) {
+        reader.readAsDataURL(file);
+      } else {
+        // 지원하지 않는 확장자의 경우 직접 placeholder URL 추가
+        setNodes((prevNodes: any) => {
+          const updatedNodes = { ...prevNodes };
+          const fnSelectedNode = updatedNodes[nodeId];
+          if (fnSelectedNode) {
+            fnSelectedNode.imageUrls.push('https://via.placeholder.com/128');
+          }
+          return updatedNodes;
+        });
+      }
+      // (이미지 업로드 로직 구현 부분)
+      // 이 부분에 위에서 제공한 handleImageUpload 로직을 넣습니다.
+    };
+  // [setNodes],
+
+  // Depth 노드 선택
   const handleNodeSelect = (event: any, nodeId: React.SetStateAction<null>) => {
     setSelectedNodeId(nodeId);
   };
 
-  // 폴더 루트 View
-  const renderTree = (nodeId: number) => {
-    const node = nodes[nodeId];
-    return (
-      <TreeItem
-        key={node.id}
-        nodeId={node.id}
-        label={
-          editingNodeId === node.id ? (
-            <TextField
-              defaultValue={node.name}
-              onBlur={(event) => handleEditNodeEnd(event, node.id)}
-              onClick={(event) => event.stopPropagation()}
-              autoFocus
-            />
-          ) : (
-            <div role="button" onClick={() => setSelectedNode(nodes[nodeId])}>
-              {node.name}
-              <IconButton
-                size="small"
-                // style={{
-                //   height: '12px',
-                //   width: '12px',
-                // }}
-                onClick={(event) => handleAddNode(node.id, event)}
-              >
-                <AddBoxIcon
-                  style={{
-                    height: '17px',
-                    width: '17px',
-                  }}
-                />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={(event) => handleEditNodeStart(node.id, event)}
-              >
-                <EditIcon
-                  style={{
-                    height: '17px',
-                    width: '17px',
-                  }}
-                />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={(event) => handleRemoveNode(node.id, event)}
-              >
-                <DeleteIcon
-                  style={{
-                    height: '17px',
-                    width: '17px',
-                  }}
-                />
-              </IconButton>
-            </div>
-          )
-        }
-        onDragStart={(event) => handleDragStart(event, node.id)}
-        onDragOver={handleDragOver}
-        onDrop={(event) => handleDrop(event, node.id)}
-        draggable
-      >
-        {node.children.map((childId: number) => renderTree(childId))}
-      </TreeItem>
-    );
-  };
+  // 폴더 루트 reader View
+  // const renderTree = (nodeId: number) => {
+  //   const node = nodes[nodeId];
+  //   return (
+  //     <TreeItem
+  //       key={node.id}
+  //       nodeId={node.id}
+  //       label={
+  //         editingNodeId === node.id ? (
+  //           <TextField
+  //             defaultValue={node.name}
+  //             onBlur={(event) => handleEditNodeEnd(event, node.id)}
+  //             onClick={(event) => event.stopPropagation()}
+  //             autoFocus
+  //           />
+  //         ) : (
+  //           <div role="button" onClick={() => setSelectedNode(nodes[nodeId])}>
+  //             {node.name}
+  //             <IconButton
+  //               size="small"
+  //               // style={{
+  //               //   height: '12px',
+  //               //   width: '12px',
+  //               // }}
+  //               onClick={(event) => handleAddNode(node.id, event)}
+  //             >
+  //               <AddBoxIcon
+  //                 style={{
+  //                   height: '17px',
+  //                   width: '17px',
+  //                 }}
+  //               />
+  //             </IconButton>
+  //             <IconButton
+  //               size="small"
+  //               onClick={(event) => handleEditNodeStart(node.id, event)}
+  //             >
+  //               <EditIcon
+  //                 style={{
+  //                   height: '17px',
+  //                   width: '17px',
+  //                 }}
+  //               />
+  //             </IconButton>
+  //             <IconButton
+  //               size="small"
+  //               onClick={(event) => handleRemoveNode(node.id, event)}
+  //             >
+  //               <DeleteIcon
+  //                 style={{
+  //                   height: '17px',
+  //                   width: '17px',
+  //                 }}
+  //               />
+  //             </IconButton>
+  //           </div>
+  //         )
+  //       }
+  //       onDragStart={(event) => handleDragStart(event, node.id)}
+  //       onDragOver={handleDragOver}
+  //       onDrop={(event) => handleDrop(event, node.id)}
+  //       draggable
+  //     >
+  //       {node.children.map((childId: number) => renderTree(childId))}
+  //     </TreeItem>
+  //   );
+  // };
 
   // const handleFolderUpload = (event: { target: { files: any } }) => {
   //   const files = event?.target?.files;
@@ -789,6 +820,7 @@ function FileSystemNavigator() {
   //   });
   // };
 
+  // 폴더 업로드 버튼
   const handleFolderUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
@@ -903,7 +935,7 @@ function FileSystemNavigator() {
         // 지원하지 않는 확장자일 경우, FileReader를 사용하지 않고도 Promise를 resolve
         if (!isSupportedImage) {
           reader.onload({
-            target: { result: 'https://via.placeholder.com/150' },
+            target: { result: 'https://via.placeholder.com/128' },
           });
         }
       }
@@ -914,7 +946,134 @@ function FileSystemNavigator() {
     });
   };
 
-  console.log(nodes);
+  // 드래그앤드롭 드롭
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const { files } = event.dataTransfer;
+      if (files && files.length > 0) {
+        handleDropImageUpload(files);
+      }
+    },
+    [handleDropImageUpload],
+  );
+
+  // 드래그앤드롭 드래그
+  const handleDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    [],
+  );
+
+  const handleDropItem = useCallback(
+    (event: React.DragEvent<HTMLDivElement>, nodeId: any) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const { files } = event.dataTransfer;
+      console.log(files);
+      if (files && files.length > 0) {
+        handleDropImageUpload(files, nodeId);
+      }
+    },
+    [handleDropImageUpload],
+  );
+
+  // 드래그앤드롭 드래그
+  const handleDragOverItem = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    [],
+  );
+
+  const renderTree = (nodeId: number) => {
+    const node = nodes[nodeId];
+    return (
+      <TreeItem
+        draggable
+        onDrop={(e: React.DragEvent<HTMLDivElement>) => {
+          handleDropItem(e, node.id);
+          console.log(node.id);
+        }}
+        onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
+          handleDragOverItem(e);
+          console.log(node.id);
+        }}
+        key={node.id}
+        nodeId={node.id}
+        label={
+          editingNodeId === node.id ? (
+            <TextField
+              defaultValue={node.name}
+              onBlur={(event) => handleEditNodeEnd(event, node.id)}
+              onClick={(event) => event.stopPropagation()}
+              autoFocus
+            />
+          ) : (
+            <div
+              // className="TreeItem"
+              role="button"
+              onClick={() => setSelectedNode(nodes[nodeId])}
+              // style={{ background: 'black' }}
+            >
+              {node.name}
+              <IconButton
+                size="small"
+                // style={{
+                //   height: '12px',
+                //   width: '12px',
+                // }}
+                onClick={(event) => handleAddNode(node.id, event)}
+              >
+                <AddBoxIcon
+                  style={{
+                    height: '17px',
+                    width: '17px',
+                  }}
+                />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={(event) => handleEditNodeStart(node.id, event)}
+              >
+                <EditIcon
+                  style={{
+                    height: '17px',
+                    width: '17px',
+                  }}
+                />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={(event) => handleRemoveNode(node.id, event)}
+              >
+                <DeleteIcon
+                  style={{
+                    height: '17px',
+                    width: '17px',
+                  }}
+                />
+              </IconButton>
+            </div>
+          )
+        }
+        // onDragStart={(event) => handleDragStart(event, node.id)}
+        // onDragOver={handleDragOver}
+        // onDrop={(event) => handleDrop(event, node.id)}
+        // draggable
+      >
+        {node.children.map((childId: number) => renderTree(childId))}
+      </TreeItem>
+    );
+  };
+
+  // console.log(nodes);
   return (
     // BG
     <Box className="Background">
@@ -949,6 +1108,10 @@ function FileSystemNavigator() {
           defaultCollapseIcon={<ExpandMoreIcon />}
           defaultExpandIcon={<ChevronRightIcon />}
           onNodeSelect={handleNodeSelect}
+          // 해당 부분 tree view 드랍
+          // draggable
+          // onDrop={handleDrop}
+          // onDragOver={handleDragOver}
         >
           {Object.keys(nodes).map(
             (nodeId) => nodes[nodeId].parentId === null && renderTree(nodeId),
@@ -957,33 +1120,40 @@ function FileSystemNavigator() {
       </Box>
       {/* // 선택 된 폴더 데이터 뷰 */}
 
-      {selectedNode && (
-        <Box mt={2} className="FolderView">
-          <Box className="FolderViewHeader">
+      {/* {selectedNode && ( */}
+      <Box
+        mt={2}
+        className="FolderView"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+      >
+        <Box className="FolderViewHeader">
+          {selectedNode && (
             <Typography variant="h6">{selectedNode.name}</Typography>
-          </Box>
-          <Box>
-            {selectedNode?.imageUrls?.map(
-              (
-                imageUrl: string | undefined,
-                index: React.Key | null | undefined,
-              ) => (
-                <img
-                  // eslint-disable-next-line react/no-array-index-key
-                  key={index}
-                  src={imageUrl}
-                  alt={`${index}`}
-                  style={{
-                    maxHeight: '125px',
-                    maxWidth: '125px',
-                    margin: '10px',
-                  }}
-                />
-              ),
-            )}
-          </Box>
+          )}
         </Box>
-      )}
+        <Box draggable>
+          {selectedNode?.imageUrls?.map(
+            (
+              imageUrl: string | undefined,
+              index: React.Key | null | undefined,
+            ) => (
+              <img
+                // eslint-disable-next-line react/no-array-index-key
+                key={index}
+                src={imageUrl}
+                alt={`${index}`}
+                style={{
+                  maxHeight: '125px',
+                  maxWidth: '125px',
+                  margin: '10px',
+                }}
+              />
+            ),
+          )}
+        </Box>
+      </Box>
+      {/* )} */}
 
       {/* <div className="JsonList">
           <pre>{JSON.stringify(nodes, null, 2)}</pre>
