@@ -224,6 +224,7 @@ function FileSystemNavigator() {
   // };
 
   // 이미지 업로드 버튼
+
   const handleImageUpload = (
     // files?: any,
     event?: { target: { files: any[] } },
@@ -288,10 +289,78 @@ function FileSystemNavigator() {
     }
   };
 
-  // 이미지 업로드 드래그앤드롭
-  const handleDropImageUpload =
-    // useCallback
+  // 이미지 업로드 드래그앤드롭 메인뷰
+  const handleDropImageUploadView = useCallback(
+    (files: FileList) => {
+      console.log(files[0]);
+      const file = files[0];
+      if (!file) {
+        return;
+      }
 
+      // 지원하는 이미지 파일 확장자 목록
+      const supportedExtensions = [
+        'png',
+        'jpg',
+        'gif',
+        'bmp',
+        'tiff',
+        'psd',
+        'psb',
+        'webp',
+        'ico',
+        'anigif',
+      ];
+
+      // 파일 확장자 확인
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+      // 확장자가 지원 목록에 있는지 확인
+      const isSupportedImage = supportedExtensions.includes(
+        fileExtension || '',
+      );
+
+      const reader = new FileReader();
+      reader.onload = (loadEvent: any) => {
+        const newImageUrl = isSupportedImage
+          ? loadEvent.target.result
+          : 'https://via.placeholder.com/128';
+        if (selectedNodeId) {
+          setNodes((prevNodes: any) => {
+            const updatedNodes = { ...prevNodes };
+            const fnSelectedNode = updatedNodes[selectedNodeId];
+            if (fnSelectedNode) {
+              fnSelectedNode.imageUrls = [
+                ...fnSelectedNode.imageUrls,
+                newImageUrl,
+              ];
+            }
+            return updatedNodes;
+          });
+        }
+      };
+
+      if (isSupportedImage) {
+        reader.readAsDataURL(file);
+      } else {
+        // 지원하지 않는 확장자의 경우 직접 placeholder URL 추가
+        setNodes((prevNodes: any) => {
+          const updatedNodes = { ...prevNodes };
+          const fnSelectedNode = updatedNodes[selectedNodeId];
+          if (fnSelectedNode) {
+            fnSelectedNode.imageUrls.push('https://via.placeholder.com/128');
+          }
+          return updatedNodes;
+        });
+      }
+      // (이미지 업로드 로직 구현 부분)
+      // 이 부분에 위에서 제공한 handleImageUpload 로직을 넣습니다.
+    },
+    [setNodes, selectedNodeId],
+  );
+
+  // 이미지 업로드 드래그앤드롭 폴더트리
+  const handleDropImageUploadTree = useCallback(
     (files: FileList, nodeId: any) => {
       console.log(files[0]);
       const file = files[0];
@@ -356,14 +425,16 @@ function FileSystemNavigator() {
       }
       // (이미지 업로드 로직 구현 부분)
       // 이 부분에 위에서 제공한 handleImageUpload 로직을 넣습니다.
-    };
-  // [setNodes],
+    },
+    [setNodes],
+  );
 
   // Depth 노드 선택
   const handleNodeSelect = (event: any, nodeId: React.SetStateAction<null>) => {
     setSelectedNodeId(nodeId);
   };
 
+  // 임시코드
   // 폴더 루트 reader View
   // const renderTree = (nodeId: number) => {
   //   const node = nodes[nodeId];
@@ -821,8 +892,10 @@ function FileSystemNavigator() {
   // };
 
   // 폴더 업로드 버튼
+
   const handleFolderUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
+    console.log(files);
     if (!files) return;
 
     const newNodes: { [key: string]: FileNode } = { ...nodes };
@@ -867,23 +940,6 @@ function FileSystemNavigator() {
           imageParentId = parentId;
         }
       });
-
-      // 이미지 파일 처리
-      // if (file.type.startsWith('image/') && imageParentId) {
-      //   const reader = new FileReader();
-      //   const fileReaderPromise = new Promise<void>((resolve) => {
-      //     reader.onload = (loadEvent) => {
-      //       const result = loadEvent.target?.result;
-      //       if (typeof result === 'string' && newNodes[imageParentId]) {
-      //         newNodes[imageParentId].imageUrls.push(result);
-      //       }
-      //       resolve();
-      //     };
-      //     reader.readAsDataURL(file);
-      //   });
-
-      //   fileReaders.push(fileReaderPromise);
-      // }
 
       if (file.type.startsWith('image/') && imageParentId) {
         // 지원하는 이미지 파일 확장자 목록
@@ -946,6 +1002,358 @@ function FileSystemNavigator() {
     });
   };
 
+  const handleFolderUploadView = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const newNodes: { [key: string]: FileNode } = { ...nodes };
+    const fileReaders: Promise<void>[] = [];
+
+    Array.from(files).forEach((file) => {
+      if (file.name === '.DS_Store') return; // .DS_Store 파일 제외
+
+      const path = file.webkitRelativePath;
+      const folders = path.split('/');
+      let parentId: string | null = selectedNodeId; // 선택된 노드 ID를 부모 ID로 초기화
+
+      // 이미지 파일의 경우, 부모 폴더 ID를 올바르게 설정하기 위한 변수
+      let imageParentId: string | null = parentId;
+
+      // 선택된 노드가 있으면, 그 노드의 경로를 기준으로 새 경로를 구성
+      const basePath = selectedNodeId ? `${selectedNodeId}/` : '';
+
+      folders.forEach((folder, index) => {
+        const isLast = index === folders.length - 1;
+        const id = basePath + folders.slice(0, index + 1).join('/');
+
+        // 폴더 노드 추가 로직 (이미지 파일 처리 전에 parentId 설정)
+        if (!isLast) {
+          if (!newNodes[id]) {
+            newNodes[id] = {
+              id,
+              name: folder,
+              children: [],
+              parentId,
+              imageUrls: [],
+            };
+          }
+
+          if (parentId && !newNodes[parentId].children.includes(id)) {
+            newNodes[parentId].children.push(id);
+          }
+
+          parentId = id; // 폴더 노드에 대한 parentId 업데이트
+        } else {
+          // 이미지 파일의 경우, 바로 이전 폴더를 부모로 설정
+          imageParentId = parentId;
+        }
+      });
+
+      if (file.type.startsWith('image/') && imageParentId) {
+        // 지원하는 이미지 파일 확장자 목록
+        const supportedExtensions = [
+          'png',
+          'jpg',
+          'gif',
+          'bmp',
+          'tiff',
+          'psd',
+          'psb',
+          'webp',
+          'ico',
+          'anigif',
+        ];
+
+        // 파일 확장자 확인
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+        // 확장자가 지원 목록에 있는지 확인
+        const isSupportedImage = supportedExtensions.includes(
+          fileExtension || '',
+        );
+
+        const reader = new FileReader();
+        const fileReaderPromise = new Promise<void>((resolve) => {
+          reader.onload = (loadEvent) => {
+            // 지원하는 확장자인 경우 Base64 데이터를 사용, 그렇지 않은 경우 placeholder URL
+            const imageUrl = isSupportedImage
+              ? loadEvent.target?.result
+              : 'https://via.placeholder.com/150';
+            if (typeof imageUrl === 'string' && newNodes[imageParentId]) {
+              newNodes[imageParentId].imageUrls.push(imageUrl);
+            }
+            resolve();
+          };
+
+          // 지원하는 이미지 확장자인 경우에만 파일을 읽음
+          if (isSupportedImage) {
+            reader.readAsDataURL(file);
+          } else {
+            // 지원하지 않는 확장자의 경우 즉시 placeholder 이미지 URL을 추가
+            resolve();
+          }
+        });
+
+        fileReaders.push(fileReaderPromise);
+
+        // 지원하지 않는 확장자일 경우, FileReader를 사용하지 않고도 Promise를 resolve
+        if (!isSupportedImage) {
+          reader.onload({
+            target: { result: 'https://via.placeholder.com/128' },
+          });
+        }
+      }
+    });
+
+    Promise.all(fileReaders).then(() => {
+      setNodes(newNodes);
+    });
+  };
+
+  // 드래그 앤 드롭된 아이템 처리
+  const handleDropTest = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // const  = event.target.files;
+    console.log(event.target.files);
+
+    const items = event.dataTransfer.items;
+    // console.log(event.dataTransfer.items);
+    if (items) {
+      const directoryReaders: Promise<void>[] = [];
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i].webkitGetAsEntry();
+        if (item) {
+          directoryReaders.push(readDirectoryEntry(item));
+        }
+      }
+
+      Promise.all(directoryReaders).then(() => {
+        console.log('모든 폴더와 파일이 처리되었습니다.');
+        // 여기서 상태 업데이트 등의 추가 작업을 수행합니다.
+      });
+    }
+  };
+
+  // DirectoryEntry 또는 FileEntry 처리
+  const readDirectoryEntry = (entry, basePath = '') => {
+    return new Promise<void>((resolve) => {
+      if (entry.isFile) {
+        entry.file((file) => {
+          // 여기서 파일 처리 로직을 수행합니다.
+          // 예: 파일이 이미지인 경우 상태 업데이트
+          console.log(file);
+          resolve();
+        });
+      } else if (entry.isDirectory) {
+        const dirReader = entry.createReader();
+        dirReader.readEntries((entries) => {
+          const directoryPromises = [];
+          for (const entry of entries) {
+            const path = `${basePath}${entry.name}`;
+            directoryPromises.push(readDirectoryEntry(entry, path + '/'));
+          }
+          Promise.all(directoryPromises).then(() => resolve());
+        });
+      }
+    });
+  };
+
+  const handleFolderUploadTree = async (
+    event: ChangeEvent<HTMLInputElement>,
+    nodeId: any,
+  ) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const newNodes: { [key: string]: FileNode } = { ...nodes };
+    const fileReaders: Promise<void>[] = [];
+
+    Array.from(files).forEach((file) => {
+      if (file.name === '.DS_Store') return; // .DS_Store 파일 제외
+
+      const path = file.webkitRelativePath;
+      const folders = path.split('/');
+      let parentId: string | null = nodeId; // 선택된 노드 ID를 부모 ID로 초기화
+
+      // 이미지 파일의 경우, 부모 폴더 ID를 올바르게 설정하기 위한 변수
+      let imageParentId: string | null = parentId;
+
+      // 선택된 노드가 있으면, 그 노드의 경로를 기준으로 새 경로를 구성
+      const basePath = nodeId ? `${nodeId}/` : '';
+
+      folders.forEach((folder, index) => {
+        const isLast = index === folders.length - 1;
+        const id = basePath + folders.slice(0, index + 1).join('/');
+
+        // 폴더 노드 추가 로직 (이미지 파일 처리 전에 parentId 설정)
+        if (!isLast) {
+          if (!newNodes[id]) {
+            newNodes[id] = {
+              id,
+              name: folder,
+              children: [],
+              parentId,
+              imageUrls: [],
+            };
+          }
+
+          if (parentId && !newNodes[parentId].children.includes(id)) {
+            newNodes[parentId].children.push(id);
+          }
+
+          parentId = id; // 폴더 노드에 대한 parentId 업데이트
+        } else {
+          // 이미지 파일의 경우, 바로 이전 폴더를 부모로 설정
+          imageParentId = parentId;
+        }
+      });
+
+      if (file.type.startsWith('image/') && imageParentId) {
+        // 지원하는 이미지 파일 확장자 목록
+        const supportedExtensions = [
+          'png',
+          'jpg',
+          'gif',
+          'bmp',
+          'tiff',
+          'psd',
+          'psb',
+          'webp',
+          'ico',
+          'anigif',
+        ];
+
+        // 파일 확장자 확인
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+        // 확장자가 지원 목록에 있는지 확인
+        const isSupportedImage = supportedExtensions.includes(
+          fileExtension || '',
+        );
+
+        const reader = new FileReader();
+        const fileReaderPromise = new Promise<void>((resolve) => {
+          reader.onload = (loadEvent) => {
+            // 지원하는 확장자인 경우 Base64 데이터를 사용, 그렇지 않은 경우 placeholder URL
+            const imageUrl = isSupportedImage
+              ? loadEvent.target?.result
+              : 'https://via.placeholder.com/150';
+            if (typeof imageUrl === 'string' && newNodes[imageParentId]) {
+              newNodes[imageParentId].imageUrls.push(imageUrl);
+            }
+            resolve();
+          };
+
+          // 지원하는 이미지 확장자인 경우에만 파일을 읽음
+          if (isSupportedImage) {
+            reader.readAsDataURL(file);
+          } else {
+            // 지원하지 않는 확장자의 경우 즉시 placeholder 이미지 URL을 추가
+            resolve();
+          }
+        });
+
+        fileReaders.push(fileReaderPromise);
+
+        // 지원하지 않는 확장자일 경우, FileReader를 사용하지 않고도 Promise를 resolve
+        if (!isSupportedImage) {
+          reader.onload({
+            target: { result: 'https://via.placeholder.com/128' },
+          });
+        }
+      }
+    });
+
+    Promise.all(fileReaders).then(() => {
+      setNodes(newNodes);
+    });
+  };
+
+  // const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+  //   event.preventDefault();
+  //   event.stopPropagation();
+
+  //   const { files } = event.dataTransfer;
+  //   if (files && files.length > 0) {
+  //     let isFolderUpload = false;
+
+  //     // 폴더 업로드 감지
+  //     for (let i = 0; i < files.length; i++) {
+  //       if (files[i].webkitRelativePath) {
+  //         isFolderUpload = true;
+  //         break;
+  //       }
+  //     }
+
+  //     if (isFolderUpload) {
+  //       console.log('폴더가 업로드되었습니다.');
+  //       // 폴더 업로드 처리 로직
+  //     } else {
+  //       console.log('파일이 업로드되었습니다.');
+  //       handleDropImageUploadView(files);
+
+  //       // 단일 파일 업로드 처리 로직
+  //     }
+
+  //     // 파일 또는 폴더 업로드 처리 함수 호출
+  //     // handleDropImageUploadView(files);
+  //   }
+  // };
+  // [handleDropImageUploadView],
+  // );
+
+  // const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  //   event.preventDefault();
+  //   event.stopPropagation();
+
+  //   const items = event.dataTransfer.items;
+
+  //   if (items) {
+  //     for (let i = 0; i < items.length; i++) {
+  //       const item = items[i].webkitGetAsEntry();
+  //       if (item) {
+  //         processEntry(item);
+  //       }
+  //     }
+  //   }
+  // }, []);
+
+  // const processEntry = (entry) => {
+  //   if (entry.isFile) {
+  //     // 파일 처리
+  //     console.log('파일');
+  //     entry.file((file) => {
+  //       // console.log(file);
+
+  //       // 여기에서 파일을 처리합니다.
+  //       // 예를 들어, 이미지 파일이라면 Data URL로 읽기
+  //       if (file.type.startsWith('image/')) {
+  //         const reader = new FileReader();
+  //         reader.onload = (e) => {
+  //           // console.log(e.target.result); // Base64 이미지 데이터
+  //         };
+  //         reader.readAsDataURL(file);
+  //       }
+  //     });
+  //   } else if (entry.isDirectory) {
+  //     console.log('폴더');
+  //     console.log(r)
+  //     // handleFolderUploadView(entry);
+  //     // 디렉토리 처리, 디렉토리 내용 읽기
+  //     // const dirReader = entry.createReader();
+  //     // dirReader.readEntries((entries) => {
+  //     //   for (let i = 0; i < entries.length; i++) {
+  //     //     processEntry(entries[i]);
+  //     //   }
+  //     // });
+  //   }
+  // };
+
   // 드래그앤드롭 드롭
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -954,10 +1362,11 @@ function FileSystemNavigator() {
 
       const { files } = event.dataTransfer;
       if (files && files.length > 0) {
-        handleDropImageUpload(files);
+        // handleDropImageUploadView(files);
+        handleFolderUploadView(files);
       }
     },
-    [handleDropImageUpload],
+    [handleDropImageUploadView, handleFolderUploadView],
   );
 
   // 드래그앤드롭 드래그
@@ -969,7 +1378,7 @@ function FileSystemNavigator() {
     [],
   );
 
-  const handleDropItem = useCallback(
+  const handleDropTree = useCallback(
     (event: React.DragEvent<HTMLDivElement>, nodeId: any) => {
       event.preventDefault();
       event.stopPropagation();
@@ -977,14 +1386,14 @@ function FileSystemNavigator() {
       const { files } = event.dataTransfer;
       console.log(files);
       if (files && files.length > 0) {
-        handleDropImageUpload(files, nodeId);
+        handleDropImageUploadTree(files, nodeId);
       }
     },
-    [handleDropImageUpload],
+    [handleDropImageUploadTree],
   );
 
   // 드래그앤드롭 드래그
-  const handleDragOverItem = useCallback(
+  const handleDragOverTree = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.stopPropagation();
@@ -998,11 +1407,11 @@ function FileSystemNavigator() {
       <TreeItem
         draggable
         onDrop={(e: React.DragEvent<HTMLDivElement>) => {
-          handleDropItem(e, node.id);
+          handleDropTree(e, node.id);
           console.log(node.id);
         }}
         onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
-          handleDragOverItem(e);
+          handleDragOverTree(e);
           console.log(node.id);
         }}
         key={node.id}
@@ -1124,8 +1533,10 @@ function FileSystemNavigator() {
       <Box
         mt={2}
         className="FolderView"
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
+        // onDrop={handleDrop}
+        onDrop={handleDropTest}
+        // onDragOver={handleDragOver}
+        onDragOver={(event) => event.preventDefault()}
       >
         <Box className="FolderViewHeader">
           {selectedNode && (
