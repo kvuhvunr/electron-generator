@@ -895,7 +895,8 @@ function FileSystemNavigator() {
 
   const handleFolderUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    console.log(files);
+    // console.log(files);
+    console.log(event.target.files);
     if (!files) return;
 
     const newNodes: { [key: string]: FileNode } = { ...nodes };
@@ -1113,55 +1114,85 @@ function FileSystemNavigator() {
   };
 
   // 드래그 앤 드롭된 아이템 처리
-  const handleDropTest = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
+  // const handleDropTest = (event: React.DragEvent<HTMLDivElement>) => {
+  //   event.preventDefault();
+  //   event.stopPropagation();
 
-    // const  = event.target.files;
-    console.log(event.target.files);
+  //   // const  = event.target.files;
+  //   // console.log();
+  //   // console.log(event.target.files);
+  //   console.log(event.dataTransfer.items);
+  //   const items = event.dataTransfer.items;
+  //   // console.log(event.dataTransfer.items);
+  //   if (items) {
+  //     const directoryReaders: Promise<void>[] = [];
 
-    const items = event.dataTransfer.items;
-    // console.log(event.dataTransfer.items);
-    if (items) {
-      const directoryReaders: Promise<void>[] = [];
+  //     for (let i = 0; i < items.length; i++) {
+  //       const item = items[i].webkitGetAsEntry();
+  //       if (item) {
+  //         directoryReaders.push(readDirectoryEntry(item));
+  //       }
+  //     }
 
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i].webkitGetAsEntry();
-        if (item) {
-          directoryReaders.push(readDirectoryEntry(item));
-        }
-      }
+  //     Promise.all(directoryReaders).then(() => {
+  //       console.log('모든 폴더와 파일이 처리되었습니다.');
+  //       // 여기서 상태 업데이트 등의 추가 작업을 수행합니다.
+  //     });
+  //   }
+  // };
 
-      Promise.all(directoryReaders).then(() => {
-        console.log('모든 폴더와 파일이 처리되었습니다.');
-        // 여기서 상태 업데이트 등의 추가 작업을 수행합니다.
+  // // DirectoryEntry 또는 FileEntry 처리
+  // const readDirectoryEntry = (entry, basePath = '') => {
+  //   return new Promise<void>((resolve) => {
+  //     if (entry.isFile) {
+  //       entry.file((file) => {
+  //         // 여기서 파일 처리 로직을 수행합니다.
+  //         // 예: 파일이 이미지인 경우 상태 업데이트
+  //         // console.log(file);
+  //         resolve();
+  //       });
+  //     } else if (entry.isDirectory) {
+  //       const dirReader = entry.createReader();
+  //       dirReader.readEntries((entries) => {
+  //         const directoryPromises = [];
+  //         for (const entry of entries) {
+  //           const path = `${basePath}${entry.name}`;
+  //           directoryPromises.push(readDirectoryEntry(entry, path + '/'));
+  //         }
+  //         Promise.all(directoryPromises).then(() => resolve());
+  //       });
+  //     }
+  //   });
+  // };
+
+  function traverseEntry(entry, path = '') {
+    if (entry.isFile) {
+      entry.file((file) => {
+        console.log(`File: ${path}${file.name}`);
+        // 여기에서 파일 정보를 사용하여 폴더 트리 정보를 구성할 수 있습니다.
+      });
+    } else if (entry.isDirectory) {
+      const dirReader = entry.createReader();
+      dirReader.readEntries((entries) => {
+        entries.forEach((entry) => {
+          traverseEntry(entry, `${path}${entry.name}/`);
+        });
       });
     }
-  };
+  }
 
-  // DirectoryEntry 또는 FileEntry 처리
-  const readDirectoryEntry = (entry, basePath = '') => {
-    return new Promise<void>((resolve) => {
-      if (entry.isFile) {
-        entry.file((file) => {
-          // 여기서 파일 처리 로직을 수행합니다.
-          // 예: 파일이 이미지인 경우 상태 업데이트
-          console.log(file);
-          resolve();
-        });
-      } else if (entry.isDirectory) {
-        const dirReader = entry.createReader();
-        dirReader.readEntries((entries) => {
-          const directoryPromises = [];
-          for (const entry of entries) {
-            const path = `${basePath}${entry.name}`;
-            directoryPromises.push(readDirectoryEntry(entry, path + '/'));
-          }
-          Promise.all(directoryPromises).then(() => resolve());
-        });
+  function handleDropTest(event) {
+    event.preventDefault();
+    const items = event.dataTransfer.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const entry = items[i].webkitGetAsEntry();
+        if (entry) {
+          traverseEntry(entry);
+        }
       }
-    });
-  };
+    }
+  }
 
   const handleFolderUploadTree = async (
     event: ChangeEvent<HTMLInputElement>,
@@ -1354,6 +1385,20 @@ function FileSystemNavigator() {
   //   }
   // };
 
+  // const handleDropTest = useCallback(
+  //   (event: React.DragEvent<HTMLDivElement>) => {
+  //     event.preventDefault();
+  //     event.stopPropagation();
+
+  //     const { files } = event.dataTransfer;
+  //     if (files && files.length > 0) {
+  //       // handleDropImageUploadView(files);
+  //       handleDrop(files);
+  //     }
+  //   },
+  //   [handleDropImageUploadView, handleFolderUploadView, handleDrop],
+  // );
+
   // 드래그앤드롭 드롭
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -1362,8 +1407,8 @@ function FileSystemNavigator() {
 
       const { files } = event.dataTransfer;
       if (files && files.length > 0) {
-        // handleDropImageUploadView(files);
-        handleFolderUploadView(files);
+        handleDropImageUploadView(files);
+        // handleFolderUploadView(files);
       }
     },
     [handleDropImageUploadView, handleFolderUploadView],
@@ -1535,8 +1580,8 @@ function FileSystemNavigator() {
         className="FolderView"
         // onDrop={handleDrop}
         onDrop={handleDropTest}
-        // onDragOver={handleDragOver}
-        onDragOver={(event) => event.preventDefault()}
+        onDragOver={handleDragOver}
+        // onDragOver={(event) => event.preventDefault()}
       >
         <Box className="FolderViewHeader">
           {selectedNode && (
