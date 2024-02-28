@@ -742,25 +742,57 @@ function FolderTreeTest() {
     [],
   );
 
+  // const handleDropOnNode = (event, targetNodeId) => {
+  //   event.preventDefault();
+  //   const dragData = JSON.parse(event.dataTransfer.getData('application/json'));
+  //   const { nodeId: sourceNodeId, imageIndex } = dragData;
+
+  //   if (sourceNodeId === targetNodeId) {
+  //     // 같은 노드 내에서의 드랍은 처리하지 않음
+  //     return;
+  //   }
+
+  //   // 이미지 객체를 소스 노드에서 제거하고 타겟 노드에 추가하는 로직 구현
+  //   const imageObject = nodes[sourceNodeId].imageUrls.splice(imageIndex, 1)[0];
+  //   if (imageObject) {
+  //     const updatedNodes = { ...nodes };
+  //     if (!updatedNodes[targetNodeId].imageUrls) {
+  //       updatedNodes[targetNodeId].imageUrls = [];
+  //     }
+  //     updatedNodes[targetNodeId].imageUrls.push(imageObject);
+  //     setNodes(updatedNodes);
+  //   }
+  // };
+
   const handleDropOnNode = (event, targetNodeId) => {
     event.preventDefault();
-    const dragData = JSON.parse(event.dataTransfer.getData('application/json'));
-    const { nodeId: sourceNodeId, imageIndex } = dragData;
+    const data = event.dataTransfer.getData('application/json');
 
-    if (sourceNodeId === targetNodeId) {
-      // 같은 노드 내에서의 드랍은 처리하지 않음
-      return;
-    }
+    // JSON 데이터가 있는 경우에만 처리
+    if (data) {
+      const dragData = JSON.parse(data);
+      const { nodeId: sourceNodeId, imageIndex } = dragData;
 
-    // 이미지 객체를 소스 노드에서 제거하고 타겟 노드에 추가하는 로직 구현
-    const imageObject = nodes[sourceNodeId].imageUrls.splice(imageIndex, 1)[0];
-    if (imageObject) {
-      const updatedNodes = { ...nodes };
-      if (!updatedNodes[targetNodeId].imageUrls) {
-        updatedNodes[targetNodeId].imageUrls = [];
+      if (sourceNodeId === targetNodeId) {
+        // 같은 노드 내에서의 드랍은 처리하지 않음
+        return;
       }
-      updatedNodes[targetNodeId].imageUrls.push(imageObject);
-      setNodes(updatedNodes);
+
+      const imageObject = nodes[sourceNodeId].imageUrls.splice(
+        imageIndex,
+        1,
+      )[0];
+      if (imageObject) {
+        const updatedNodes = { ...nodes };
+        if (!updatedNodes[targetNodeId].imageUrls) {
+          updatedNodes[targetNodeId].imageUrls = [];
+        }
+        updatedNodes[targetNodeId].imageUrls.push(imageObject);
+        setNodes(updatedNodes);
+      }
+    } else {
+      // 여기에서 로컬 이미지 파일을 처리하는 로직을 추가할 수 있습니다.
+      // 예: handleDropImageUploadTree(event.dataTransfer.files, targetNodeId);
     }
   };
 
