@@ -801,6 +801,80 @@ function FolderTreeTest() {
     event.dataTransfer.setData('application/json', JSON.stringify(dragData));
   };
 
+  // const renderTree = (nodeId: number) => {
+  //   const node = nodes[nodeId];
+  //   return (
+  //     <TreeItem
+  //       draggable
+  //       onDragOver={(event) => {
+  //         event.preventDefault(); // 드랍 영역으로 설정
+  //         handleDragOverTree(event); // 기존 드래그 오버 로직 처리
+  //         console.log(node.id); // 추가적으로 필요한 로직이 있다면 여기에 작성
+  //       }}
+  //       onDrop={(event) => {
+  //         handleDropOnNode(event, node.id); // 새로 추가하려는 드랍 처리 로직
+  //         handleDropTree(event, node.id); // 기존의 드랍 처리 로직
+  //         console.log(node.id); // 드랍 이벤트 발생 시 필요한 추가적인 로직
+  //       }}
+  //       key={node.id}
+  //       nodeId={node.id}
+  //       label={
+  //         editingNodeId === node.id ? (
+  //           <TextField
+  //             defaultValue={node.name}
+  //             onBlur={(event) => handleEditNodeEnd(event, node.id)}
+  //             onClick={(event) => event.stopPropagation()}
+  //             autoFocus
+  //           />
+  //         ) : (
+  //           <div role="button" onClick={() => setSelectedNode(nodes[nodeId])}>
+  //             {node.name}
+  //             <IconButton
+  //               size="small"
+  //               onClick={(event) => handleAddNode(node.id, event)}
+  //             >
+  //               <AddBoxIcon
+  //                 style={{
+  //                   height: '17px',
+  //                   width: '17px',
+  //                 }}
+  //               />
+  //             </IconButton>
+  //             <IconButton
+  //               size="small"
+  //               onClick={(event) => handleEditNodeStart(node.id, event)}
+  //             >
+  //               <EditIcon
+  //                 style={{
+  //                   height: '17px',
+  //                   width: '17px',
+  //                 }}
+  //               />
+  //             </IconButton>
+  //             <IconButton
+  //               size="small"
+  //               onClick={(event) => handleRemoveNode(node.id, event)}
+  //             >
+  //               <DeleteIcon
+  //                 style={{
+  //                   height: '17px',
+  //                   width: '17px',
+  //                 }}
+  //               />
+  //             </IconButton>
+  //           </div>
+  //         )
+  //       }
+  //       // onDragStart={(event) => handleDragStart(event, node.id)}
+  //       // onDragOver={handleDragOver}
+  //       // onDrop={(event) => handleDrop(event, node.id)}
+  //       // draggable
+  //     >
+  //       {node.children.map((childId: number) => renderTree(childId))}
+  //     </TreeItem>
+  //   );
+  // };
+
   const renderTree = (nodeId: number) => {
     const node = nodes[nodeId];
     return (
@@ -816,18 +890,6 @@ function FolderTreeTest() {
           handleDropTree(event, node.id); // 기존의 드랍 처리 로직
           console.log(node.id); // 드랍 이벤트 발생 시 필요한 추가적인 로직
         }}
-        // onDragOver={(event) => event.preventDefault()} // 드랍 영역으로 설정
-        // onDrop={(event) => handleDropOnNode(event, node.id)}
-
-        // onDrop={(e: React.DragEvent<HTMLDivElement>) => {
-        //   handleDropTree(e, node.id);
-        //   console.log(node.id);
-        // }}
-        // onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
-        //   handleDragOverTree(e);
-        //   console.log(node.id);
-        // }}
-
         key={node.id}
         nodeId={node.id}
         label={
@@ -839,19 +901,10 @@ function FolderTreeTest() {
               autoFocus
             />
           ) : (
-            <div
-              // className="TreeItem"
-              role="button"
-              onClick={() => setSelectedNode(nodes[nodeId])}
-              // style={{ background: 'black' }}
-            >
+            <div role="button" onClick={() => setSelectedNode(nodes[nodeId])}>
               {node.name}
               <IconButton
                 size="small"
-                // style={{
-                //   height: '12px',
-                //   width: '12px',
-                // }}
                 onClick={(event) => handleAddNode(node.id, event)}
               >
                 <AddBoxIcon
@@ -886,10 +939,6 @@ function FolderTreeTest() {
             </div>
           )
         }
-        // onDragStart={(event) => handleDragStart(event, node.id)}
-        // onDragOver={handleDragOver}
-        // onDrop={(event) => handleDrop(event, node.id)}
-        // draggable
       >
         {node.children.map((childId: number) => renderTree(childId))}
       </TreeItem>
@@ -898,6 +947,7 @@ function FolderTreeTest() {
 
   console.log(nodes);
   // console.log(selectedNode?.imageUrls[0].thumbnail);
+
   return (
     // BG
     <Box className="Background">
@@ -932,27 +982,17 @@ function FolderTreeTest() {
           defaultCollapseIcon={<ExpandMoreIcon />}
           defaultExpandIcon={<ChevronRightIcon />}
           onNodeSelect={handleNodeSelect}
-          // 해당 부분 tree view 드랍
-          // draggable
-          // onDrop={handleDrop}
-          // onDragOver={handleDragOver}
         >
           {Object.keys(nodes).map(
             (nodeId) => nodes[nodeId].parentId === null && renderTree(nodeId),
           )}
         </TreeView>
       </Box>
-      {/* // 선택 된 폴더 데이터 뷰 */}
-
-      {/* {selectedNode && ( */}
       <Box
         mt={2}
         className="FolderView"
         onDrop={handleDrop}
-        // onDrop={handleDropTest}
-
         onDragOver={handleDragOver}
-        // onDragOver={(event) => event.preventDefault()}
       >
         <Box className="FolderViewHeader">
           {selectedNode && (
